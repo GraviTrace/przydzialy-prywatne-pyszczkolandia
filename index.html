@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Przydziały</title>
+
+<!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  KONFIGURACJA FIREBASE – wypełnij przed wdrożeniem  ║
+  ╠══════════════════════════════════════════════════════╣
+  ║  1. Utwórz projekt na https://console.firebase.google.com
+  ║  2. Dodaj Realtime Database (tryb testowy)
+  ║  3. Skopiuj databaseURL i wklej poniżej
+  ║  4. Reguły bazy (Database → Rules):
+  ║     { "rules": { ".read": true, ".write": true } }
+  ╚══════════════════════════════════════════════════════╝
+-->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <style>
   :root {
     --primary: #6366f1;
@@ -13,6 +28,12 @@
     --text-main: #1e293b;
     --text-muted: #64748b;
     --border-radius: 16px;
+    --done-bg: #f0fdf4;
+    --done-border: #bbf7d0;
+    --done-color: #16a34a;
+    --undone-bg: #fff1f2;
+    --undone-border: #fecdd3;
+    --undone-color: #e11d48;
   }
 
   body {
@@ -27,9 +48,7 @@
     box-sizing: border-box;
   }
 
-  * {
-    box-sizing: inherit;
-  }
+  * { box-sizing: inherit; }
 
   .wrap {
     width: 100%;
@@ -96,9 +115,7 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
 
-  .nav-btn:active {
-    transform: translateY(1px);
-  }
+  .nav-btn:active { transform: translateY(1px); }
 
   .today-btn {
     padding: 10px 24px;
@@ -116,18 +133,23 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 16px;
   }
 
+  /* ── Karta pokoju ── */
   .room-card {
     background: var(--card-bg);
     border-radius: var(--border-radius);
-    padding: 24px 16px;
+    padding: 20px 16px;
     text-align: center;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid rgba(0,0,0,0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border-color 0.3s ease;
+    border: 1.5px solid rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 
   .room-card:hover {
@@ -135,9 +157,18 @@
     box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1);
   }
 
+  .room-card.is-done {
+    background: var(--done-bg);
+    border-color: var(--done-border);
+  }
+
+  .room-card.is-undone {
+    background: var(--undone-bg);
+    border-color: var(--undone-border);
+  }
+
   .room-icon {
     font-size: 32px;
-    margin-bottom: 16px;
     display: inline-block;
     padding: 14px;
     background: #f8fafc;
@@ -151,7 +182,6 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 8px;
   }
 
   .room-person {
@@ -160,6 +190,47 @@
     color: var(--primary);
   }
 
+  /* ── Status badge ── */
+  .status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  .status-badge.done  { background: #dcfce7; color: var(--done-color); }
+  .status-badge.undone { background: #ffe4e6; color: var(--undone-color); }
+
+  /* ── Przycisk Wykonane ── */
+  .mark-btn {
+    margin-top: 4px;
+    padding: 7px 16px;
+    border: none;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 3px 8px rgba(99,102,241,0.25);
+  }
+
+  .mark-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .mark-btn:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ── Info bar ── */
   .info-bar {
     font-size: 13px;
     color: var(--text-muted);
@@ -173,6 +244,104 @@
     margin-right: auto;
   }
 
+  /* ── Modal identyfikacji ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  .modal-box {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 25px 50px -10px rgba(0,0,0,0.2);
+    max-width: 340px;
+    width: 90%;
+    text-align: center;
+  }
+
+  .modal-box h2 {
+    margin: 0 0 0.4rem;
+    font-size: 22px;
+    color: var(--text-main);
+  }
+
+  .modal-box p {
+    margin: 0 0 1.5rem;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .modal-names {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .name-btn {
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .name-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #eef2ff;
+  }
+
+  /* ── User chip (górny pasek) ── */
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #eef2ff;
+    padding: 6px 14px 6px 8px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  .user-avatar {
+    width: 26px;
+    height: 26px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .change-user-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .change-user-btn:hover { color: var(--primary); }
+
   @media (max-width: 600px) {
     .header { flex-direction: column; }
     .date-label { min-width: auto; }
@@ -181,6 +350,16 @@
 </style>
 </head>
 <body>
+
+<!-- Modal: wybór tożsamości -->
+<div class="modal-overlay show" id="modal">
+  <div class="modal-box">
+    <h2>👋 Hej!</h2>
+    <p>Kim jesteś? Twój wybór zostanie zapamiętany na tym urządzeniu.</p>
+    <div class="modal-names" id="modalNames"></div>
+  </div>
+</div>
+
 <div class="wrap">
   <div class="header">
     <div class="date-nav">
@@ -188,58 +367,170 @@
       <div class="date-label" id="dlabel">—</div>
       <button class="nav-btn" onclick="shift(+1)">→</button>
     </div>
-    <button class="today-btn" onclick="goToday()">Dziś</button>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="user-chip" id="userChip" style="display:none">
+        <div class="user-avatar" id="userAvatar"></div>
+        <span id="userName"></span>
+        <button class="change-user-btn" onclick="changeUser()">zmień</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">Dziś</button>
+    </div>
   </div>
   <div class="grid" id="cards"></div>
   <div class="info-bar" id="ibar"></div>
 </div>
+
 <script>
-const PEOPLE = ["Karol","Lena","Szymon","Julka","Wiktoria"];
-const ROOMS = [
-  {name:"Kuchnia", icon:"🍳", offset:0},
-  {name:"Salon", icon:"🛋️", offset:1},
-  {name:"Łazienka (góra)", icon:"🚿", offset:2},
-  {name:"Łazienka (dół)", icon:"🚽", offset:3},
-  {name:"Korytarze", icon:"🚪", offset:4},
-];
-const REF = new Date("2026-04-01T00:00:00");
-let current = new Date();
-current.setHours(0,0,0,0);
+  // ── Konfiguracja Firebase ──────────────────────────────────────────
+  // Wklej tutaj dane ze swojego projektu Firebase:
+  const firebaseConfig = {
+    databaseURL: "https://przydzialy-pyszczkolandia-default-rtdb.europe-west1.firebasedatabase.app/"
+    // Pozostałe pola (apiKey, authDomain itp.) nie są wymagane
+    // dla samej Realtime Database z regułami publicznymi.
+  };
+  // ──────────────────────────────────────────────────────────────────
 
-function daysBetween(a, b) {
-  return Math.round((b - a) / 86400000);
-}
-function personFor(dayOffset, roomOffset) {
-  return PEOPLE[((dayOffset + roomOffset) % 5 + 5) % 5];
-}
-function monthName(d) {
-  const m = ["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","września","października","listopada","grudnia"];
-  return m[d.getMonth()];
-}
-function dayName(d) {
-  const n = ["Niedziela","Poniedziałek","Wtorek","Środa","Czwartek","Piątek","Sobota"];
-  return n[d.getDay()];
-}
-function render() {
-  const offset = daysBetween(REF, current);
-  const label = `${dayName(current)}, ${current.getDate()} ${monthName(current)} ${current.getFullYear()}`;
-  document.getElementById("dlabel").textContent = label;
-  
-  const cards = document.getElementById("cards");
-  cards.innerHTML = ROOMS.map(r => {
-    const p = personFor(offset, r.offset);
-    return `<div class="room-card"><div class="room-icon">${r.icon}</div><div class="room-name">${r.name}</div><div class="room-person">${p}</div></div>`;
-  }).join("");
-  
-  const today = new Date(); today.setHours(0,0,0,0);
-  const isToday = current.getTime() === today.getTime();
-  document.getElementById("ibar").textContent = isToday ? "Dane na dziś" : `Dni od 1 kwietnia: ${offset > 0 ? "+" : ""}${offset}`;
-}
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-function shift(n) { current = new Date(current.getTime() + n*86400000); render(); }
-function goToday() { current = new Date(); current.setHours(0,0,0,0); render(); }
+  // ── Dane aplikacji ─────────────────────────────────────────────────
+  const PEOPLE = ["Karol","Lena","Szymon","Julka","Wiktoria"];
+  const ROOMS = [
+    {name:"Kuchnia",       icon:"🍳", offset:0},
+    {name:"Salon",         icon:"🛋️", offset:1},
+    {name:"Łazienka (góra)",icon:"🚿", offset:2},
+    {name:"Łazienka (dół)",icon:"🚽", offset:3},
+    {name:"Korytarze",     icon:"🚪", offset:4},
+  ];
+  const REF = new Date("2026-04-01T00:00:00");
 
-render();
+  let current = new Date(); current.setHours(0,0,0,0);
+  let myName = localStorage.getItem("przydzialy_user") || null;
+  let completions = {}; // { PersonName: true/false }
+  let dbRef = null;
+
+  // ── Pomocnicze ─────────────────────────────────────────────────────
+  function dateKey(d) {
+    return d.toISOString().slice(0,10); // "2026-04-21"
+  }
+  function daysBetween(a, b) {
+    return Math.round((b - a) / 86400000);
+  }
+  function personFor(dayOffset, roomOffset) {
+    return PEOPLE[((dayOffset + roomOffset) % 5 + 5) % 5];
+  }
+  function monthName(d) {
+    const m = ["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","września","października","listopada","grudnia"];
+    return m[d.getMonth()];
+  }
+  function dayName(d) {
+    const n = ["Niedziela","Poniedziałek","Wtorek","Środa","Czwartek","Piątek","Sobota"];
+    return n[d.getDay()];
+  }
+
+  // ── Renderowanie kart ──────────────────────────────────────────────
+  function render() {
+    const offset = daysBetween(REF, current);
+    document.getElementById("dlabel").textContent =
+      `${dayName(current)}, ${current.getDate()} ${monthName(current)} ${current.getFullYear()}`;
+
+    const cards = document.getElementById("cards");
+    cards.innerHTML = ROOMS.map(r => {
+      const person = personFor(offset, r.offset);
+      const done = completions[person] === true;
+      const isMe = myName === person;
+
+      const cardClass = done ? "is-done" : "is-undone";
+      const badgeClass = done ? "done" : "undone";
+      const badgeText = done ? "✓ Wykonane" : "✗ Niewykonane";
+      const btnDisabled = (done || !isMe) ? "disabled" : "";
+
+      return `
+        <div class="room-card ${cardClass}">
+          <div class="room-icon">${r.icon}</div>
+          <div class="room-name">${r.name}</div>
+          <div class="room-person">${person}</div>
+          <span class="status-badge ${badgeClass}">${badgeText}</span>
+          <button class="mark-btn" ${btnDisabled} onclick="markDone('${person}')">
+            Wykonane
+          </button>
+        </div>`;
+    }).join("");
+
+    // Licznik
+    const doneCount = ROOMS.filter(r => completions[personFor(offset, r.offset)] === true).length;
+    document.getElementById("ibar").textContent =
+      `Przydziały wykonało: ${doneCount} ${pluralOsoba(doneCount)}`;
+  }
+
+  function pluralOsoba(n) {
+    if (n === 1) return "osoba";
+    if (n >= 2 && n <= 4) return "osoby";
+    return "osób";
+  }
+
+  // ── Firebase: nasłuchiwanie zmian na bieżący dzień ─────────────────
+  function subscribeToDate(d) {
+    if (dbRef) dbRef.off(); // odsubskrybuj poprzedni dzień
+    dbRef = db.ref("completions/" + dateKey(d));
+    dbRef.on("value", snapshot => {
+      completions = snapshot.val() || {};
+      render();
+    });
+  }
+
+  // ── Oznacz jako wykonane ───────────────────────────────────────────
+  function markDone(person) {
+    if (myName !== person) return;
+    db.ref("completions/" + dateKey(current) + "/" + person).set(true);
+  }
+
+  // ── Nawigacja dat ──────────────────────────────────────────────────
+  function shift(n) {
+    current = new Date(current.getTime() + n * 86400000);
+    completions = {};
+    subscribeToDate(current);
+  }
+  function goToday() {
+    current = new Date(); current.setHours(0,0,0,0);
+    completions = {};
+    subscribeToDate(current);
+  }
+
+  // ── Identyfikacja użytkownika ──────────────────────────────────────
+  function initModal() {
+    const container = document.getElementById("modalNames");
+    container.innerHTML = PEOPLE.map(name =>
+      `<button class="name-btn" onclick="selectUser('${name}')">${name}</button>`
+    ).join("");
+  }
+
+  function selectUser(name) {
+    myName = name;
+    localStorage.setItem("przydzialy_user", name);
+    document.getElementById("modal").classList.remove("show");
+    updateUserChip();
+    render();
+  }
+
+  function changeUser() {
+    document.getElementById("modal").classList.add("show");
+  }
+
+  function updateUserChip() {
+    if (!myName) return;
+    document.getElementById("userChip").style.display = "flex";
+    document.getElementById("userAvatar").textContent = myName[0];
+    document.getElementById("userName").textContent = myName;
+  }
+
+  // ── Start ──────────────────────────────────────────────────────────
+  initModal();
+  if (myName) {
+    document.getElementById("modal").classList.remove("show");
+    updateUserChip();
+  }
+  subscribeToDate(current);
 </script>
 </body>
 </html>
