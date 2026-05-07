@@ -595,21 +595,20 @@
   }
 
   function shift(n) {
-    // Add click animation to the button
     const btn = event.target;
     btn.classList.add('nav-clicked');
     setTimeout(() => btn.classList.remove('nav-clicked'), 200);
 
     current = new Date(current.getTime() + n * 86400000);
-    completions = {}; // Clear completions immediately
-    render(); // Render immediately with empty completions
-    subscribeToDate(current); // Then load data from Firebase
+    completions = {};
+    render();
+    subscribeToDate(current);
   }
   function goToday() {
     current = new Date(); current.setHours(0,0,0,0);
-    completions = {}; // Clear completions immediately
-    render(); // Render immediately with empty completions
-    subscribeToDate(current); // Then load data from Firebase
+    completions = {};
+    render();
+    subscribeToDate(current);
   }
 
   function initModal() {
@@ -650,6 +649,7 @@
     document.getElementById("modal").classList.remove("show");
     updateUserChip();
   }
+  render();
   subscribeToDate(current);
 </script>
 </body>
