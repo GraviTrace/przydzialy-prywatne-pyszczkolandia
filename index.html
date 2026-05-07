@@ -5,21 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Przydziały</title>
 
-<!--
-  ╔══════════════════════════════════════════════════════╗
-  ║  KONFIGURACJA FIREBASE – wypełnij przed wdrożeniem  ║
-  ╠══════════════════════════════════════════════════════╣
-  ║  1. Utwórz projekt na https://console.firebase.google.com
-  ║  2. Dodaj Realtime Database (tryb testowy)
-  ║  3. Skopiuj databaseURL i wklej poniżej
-  ║  4. Reguły bazy (Database → Rules):
-  ║     { "rules": { ".read": true, ".write": true } }
-  ╚══════════════════════════════════════════════════════╝
--->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  @keyframes checkmark {
+    0% {
+      transform: scale(0.5) rotate(-45deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
   :root {
     --primary: #6366f1;
     --primary-hover: #4f46e5;
@@ -46,6 +96,9 @@
     align-items: center;
     padding: 1rem;
     box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
   }
 
   * { box-sizing: inherit; }
@@ -60,6 +113,7 @@
     padding: 2rem;
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.8);
+    animation: slideInUp 0.5s ease-out;
   }
 
   .header {
@@ -69,6 +123,7 @@
     margin-bottom: 2rem;
     gap: 12px;
     flex-wrap: wrap;
+    animation: fadeIn 0.6s ease-out 0.1s both;
   }
 
   .date-nav {
@@ -79,6 +134,7 @@
     padding: 6px;
     border-radius: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .date-label {
@@ -87,6 +143,7 @@
     color: var(--text-main);
     min-width: 220px;
     text-align: center;
+    padding: 8px 0;
   }
 
   .nav-btn, .today-btn {
@@ -95,71 +152,96 @@
     border-radius: 50px;
     cursor: pointer;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .nav-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     color: var(--text-main);
     font-size: 18px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    min-width: 40px;
+    min-height: 40px;
   }
 
   .nav-btn:hover {
     background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
 
-  .nav-btn:active { transform: translateY(1px); }
+  .nav-btn:active { 
+    transform: translateY(0) scale(0.98);
+  }
 
   .today-btn {
-    padding: 10px 24px;
+    padding: 12px 28px;
     color: white;
     background: var(--primary);
     font-size: 14px;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    min-height: 44px;
+    white-space: nowrap;
+    animation: fadeIn 0.6s ease-out 0.2s both;
   }
 
   .today-btn:hover {
     background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  }
+
+  .today-btn:active {
+    transform: translateY(0);
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 16px;
+    animation: fadeIn 0.6s ease-out 0.2s both;
   }
 
-  /* ── Karta pokoju ── */
   .room-card {
     background: var(--card-bg);
     border-radius: var(--border-radius);
     padding: 20px 16px;
     text-align: center;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border-color 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1.5px solid rgba(0,0,0,0.04);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    cursor: pointer;
   }
 
+  .room-card:nth-child(1) { animation-delay: 0.05s; }
+  .room-card:nth-child(2) { animation-delay: 0.1s; }
+  .room-card:nth-child(3) { animation-delay: 0.15s; }
+  .room-card:nth-child(4) { animation-delay: 0.2s; }
+  .room-card:nth-child(5) { animation-delay: 0.25s; }
+
   .room-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.15);
+  }
+
+  .room-card:active {
+    transform: translateY(-2px) scale(1.01);
   }
 
   .room-card.is-done {
     background: var(--done-bg);
     border-color: var(--done-border);
+    animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .room-card.is-undone {
@@ -174,6 +256,13 @@
     background: #f8fafc;
     border-radius: 50%;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.5s ease-out 0.1s both;
+  }
+
+  .room-card:hover .room-icon {
+    transform: scale(1.15) rotate(10deg);
+    background: #eff6ff;
   }
 
   .room-name {
@@ -182,44 +271,68 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.6s ease-out 0.15s both;
   }
 
   .room-person {
     font-size: 18px;
     font-weight: 700;
     color: var(--primary);
+    transition: all 0.3s ease;
+    animation: fadeIn 0.6s ease-out 0.2s both;
   }
 
-  /* ── Status badge ── */
+  .room-card:hover .room-person {
+    transform: scale(1.1);
+  }
+
   .status-badge {
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 20px;
     letter-spacing: 0.3px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.6s ease-out 0.25s both;
   }
 
-  .status-badge.done  { background: #dcfce7; color: var(--done-color); }
-  .status-badge.undone { background: #ffe4e6; color: var(--undone-color); }
+  .status-badge.done  { 
+    background: #dcfce7; 
+    color: var(--done-color);
+    animation: checkmark 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+  }
+  .status-badge.undone { 
+    background: #ffe4e6; 
+    color: var(--undone-color);
+  }
 
-  /* ── Przycisk Wykonane ── */
   .mark-btn {
     margin-top: 4px;
-    padding: 7px 16px;
+    padding: 10px 20px;
     border: none;
     border-radius: 50px;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--primary);
     color: white;
     box-shadow: 0 3px 8px rgba(99,102,241,0.25);
+    min-height: 40px;
+    min-width: 100px;
+    -webkit-tap-highlight-color: transparent;
+    animation: fadeIn 0.6s ease-out 0.3s both;
   }
 
-  .mark-btn:hover {
+  .mark-btn:hover:not(:disabled) {
     background: var(--primary-hover);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(99,102,241,0.4);
+  }
+
+  .mark-btn:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   .mark-btn:disabled {
@@ -230,64 +343,79 @@
     transform: none;
   }
 
-  /* ── Info bar ── */
   .info-bar {
     font-size: 13px;
     color: var(--text-muted);
     margin-top: 2.5rem;
     text-align: center;
     background: rgba(255,255,255,0.5);
-    padding: 8px 16px;
+    padding: 12px 24px;
     border-radius: 20px;
     display: table;
     margin-left: auto;
     margin-right: auto;
+    animation: fadeIn 0.6s ease-out 0.4s both;
+    transition: all 0.3s ease;
   }
 
-  /* ── Modal identyfikacji ── */
+  .info-bar:hover {
+    background: rgba(255,255,255,0.8);
+  }
+
   .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(6px);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 100;
     align-items: center;
     justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+    padding: 1rem;
   }
 
-  .modal-overlay.show { display: flex; }
+  .modal-overlay.show { 
+    display: flex;
+    animation: fadeIn 0.3s ease-out;
+  }
 
   .modal-box {
     background: white;
     border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 25px 50px -10px rgba(0,0,0,0.2);
-    max-width: 340px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    max-width: 380px;
     width: 90%;
     text-align: center;
+    animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .modal-box h2 {
-    margin: 0 0 0.4rem;
-    font-size: 22px;
+    margin: 0 0 0.8rem;
+    font-size: 24px;
     color: var(--text-main);
+    animation: fadeIn 0.5s ease-out 0.1s both;
   }
 
   .modal-box p {
-    margin: 0 0 1.5rem;
+    margin: 0 0 2rem;
     color: var(--text-muted);
     font-size: 14px;
+    line-height: 1.6;
+    animation: fadeIn 0.5s ease-out 0.2s both;
   }
 
   .modal-names {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    animation: fadeIn 0.5s ease-out 0.3s both;
   }
 
   .name-btn {
-    padding: 12px;
+    padding: 14px 16px;
     border: 2px solid #e2e8f0;
     border-radius: 12px;
     background: white;
@@ -295,31 +423,46 @@
     font-weight: 600;
     color: var(--text-main);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 44px;
+    animation: slideInUp 0.4s ease-out backwards;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  .name-btn:nth-child(1) { animation-delay: 0.35s; }
+  .name-btn:nth-child(2) { animation-delay: 0.4s; }
+  .name-btn:nth-child(3) { animation-delay: 0.45s; }
+  .name-btn:nth-child(4) { animation-delay: 0.5s; }
+  .name-btn:nth-child(5) { animation-delay: 0.55s; }
 
   .name-btn:hover {
     border-color: var(--primary);
     color: var(--primary);
     background: #eef2ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.2);
   }
 
-  /* ── User chip (górny pasek) ── */
+  .name-btn:active {
+    transform: translateY(0);
+  }
+
   .user-chip {
     display: flex;
     align-items: center;
     gap: 8px;
     background: #eef2ff;
-    padding: 6px 14px 6px 8px;
+    padding: 8px 16px 8px 8px;
     border-radius: 50px;
     font-size: 13px;
     font-weight: 600;
     color: var(--primary);
+    animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .user-avatar {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     background: var(--primary);
     color: white;
     border-radius: 50%;
@@ -328,6 +471,8 @@
     justify-content: center;
     font-size: 12px;
     font-weight: 700;
+    flex-shrink: 0;
+    animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .change-user-btn {
@@ -336,26 +481,176 @@
     color: var(--text-muted);
     font-size: 11px;
     cursor: pointer;
-    padding: 0;
+    padding: 0 6px;
     text-decoration: underline;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .change-user-btn:hover { color: var(--primary); }
+  .change-user-btn:hover { 
+    color: var(--primary);
+    transform: scale(1.05);
+  }
 
-  @media (max-width: 600px) {
-    .header { flex-direction: column; }
-    .date-label { min-width: auto; }
-    .wrap { padding: 1.5rem; }
+  @media (max-width: 768px) {
+    .wrap { 
+      padding: 1.5rem 1rem;
+      border-radius: 20px;
+    }
+
+    .header { 
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .date-label { 
+      min-width: auto;
+      font-size: 14px;
+    }
+
+    .grid {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+
+    .room-card {
+      padding: 18px 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body {
+      padding: 0.75rem;
+    }
+
+    .wrap { 
+      padding: 1.25rem 1rem;
+      border-radius: 16px;
+    }
+
+    .header {
+      gap: 12px;
+    }
+
+    .date-nav {
+      width: 100%;
+      justify-content: space-between;
+      padding: 8px;
+    }
+
+    .date-label {
+      font-size: 13px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+    }
+
+    .today-btn {
+      padding: 11px 24px;
+      font-size: 13px;
+      min-height: 40px;
+      width: 100%;
+    }
+
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .room-card {
+      padding: 16px 12px;
+      gap: 6px;
+    }
+
+    .room-icon {
+      font-size: 28px;
+      padding: 10px;
+    }
+
+    .room-name {
+      font-size: 11px;
+    }
+
+    .room-person {
+      font-size: 16px;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+    }
+
+    .mark-btn {
+      padding: 9px 16px;
+      font-size: 11px;
+      min-height: 36px;
+      min-width: 90px;
+    }
+
+    .info-bar {
+      font-size: 12px;
+      padding: 10px 16px;
+      margin-top: 1.5rem;
+    }
+
+    .modal-box {
+      padding: 2rem 1.5rem;
+      max-width: 100%;
+    }
+
+    .modal-box h2 {
+      font-size: 22px;
+      margin-bottom: 0.6rem;
+    }
+
+    .modal-box p {
+      font-size: 13px;
+      margin-bottom: 1.5rem;
+    }
+
+    .user-chip {
+      font-size: 12px;
+      padding: 6px 12px 6px 6px;
+    }
+
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      font-size: 10px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .wrap {
+      padding: 1rem 0.75rem;
+    }
+
+    .grid {
+      gap: 10px;
+    }
+
+    .room-card {
+      padding: 14px 10px;
+    }
+
+    .mark-btn {
+      padding: 8px 12px;
+      font-size: 10px;
+    }
   }
 </style>
 </head>
 <body>
 
-<!-- Modal: wybór tożsamości -->
 <div class="modal-overlay show" id="modal">
   <div class="modal-box">
     <h2>👋 Hej!</h2>
-    <p>Kim jesteś? Twój wybór zostanie zapamiętany na tym urządzeniu.</p>
+    <p>Kim jesteś? Twój wybór zostanie zapamiętany na twoim urządzeniu.</p>
     <div class="modal-names" id="modalNames"></div>
   </div>
 </div>
@@ -381,19 +676,13 @@
 </div>
 
 <script>
-  // ── Konfiguracja Firebase ──────────────────────────────────────────
-  // Wklej tutaj dane ze swojego projektu Firebase:
   const firebaseConfig = {
     databaseURL: "https://przydzialy-pyszczkolandia-default-rtdb.europe-west1.firebasedatabase.app/"
-    // Pozostałe pola (apiKey, authDomain itp.) nie są wymagane
-    // dla samej Realtime Database z regułami publicznymi.
   };
-  // ──────────────────────────────────────────────────────────────────
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ── Dane aplikacji ─────────────────────────────────────────────────
   const PEOPLE = ["Karol","Lena","Szymon","Julka","Wiktoria"];
   const ROOMS = [
     {name:"Kuchnia",       icon:"🍳", offset:0},
@@ -406,12 +695,11 @@
 
   let current = new Date(); current.setHours(0,0,0,0);
   let myName = localStorage.getItem("przydzialy_user") || null;
-  let completions = {}; // { PersonName: true/false }
+  let completions = {}; 
   let dbRef = null;
 
-  // ── Pomocnicze ─────────────────────────────────────────────────────
   function dateKey(d) {
-    return d.toISOString().slice(0,10); // "2026-04-21"
+    return d.toISOString().slice(0,10);
   }
   function daysBetween(a, b) {
     return Math.round((b - a) / 86400000);
@@ -428,7 +716,6 @@
     return n[d.getDay()];
   }
 
-  // ── Renderowanie kart ──────────────────────────────────────────────
   function render() {
     const offset = daysBetween(REF, current);
     document.getElementById("dlabel").textContent =
@@ -469,9 +756,8 @@
     return "osób";
   }
 
-  // ── Firebase: nasłuchiwanie zmian na bieżący dzień ─────────────────
   function subscribeToDate(d) {
-    if (dbRef) dbRef.off(); // odsubskrybuj poprzedni dzień
+    if (dbRef) dbRef.off();
     dbRef = db.ref("completions/" + dateKey(d));
     dbRef.on("value", snapshot => {
       completions = snapshot.val() || {};
@@ -479,13 +765,11 @@
     });
   }
 
-  // ── Oznacz jako wykonane ───────────────────────────────────────────
   function markDone(person) {
     if (myName !== person) return;
     db.ref("completions/" + dateKey(current) + "/" + person).set(true);
   }
 
-  // ── Nawigacja dat ──────────────────────────────────────────────────
   function shift(n) {
     current = new Date(current.getTime() + n * 86400000);
     completions = {};
@@ -497,7 +781,6 @@
     subscribeToDate(current);
   }
 
-  // ── Identyfikacja użytkownika ──────────────────────────────────────
   function initModal() {
     const container = document.getElementById("modalNames");
     container.innerHTML = PEOPLE.map(name =>
@@ -524,7 +807,6 @@
     document.getElementById("userName").textContent = myName;
   }
 
-  // ── Start ──────────────────────────────────────────────────────────
   initModal();
   if (myName) {
     document.getElementById("modal").classList.remove("show");
